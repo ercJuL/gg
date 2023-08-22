@@ -57,10 +57,10 @@ func main() {
 	if err := dc.LoadFontFace("/Library/Fonts/Arial Bold.ttf", 24); err != nil {
 		panic(err)
 	}
-	dc.DrawStringAnchored("Chart Title", S/2, P/2, 0.5, 0.5)
+	dc.DrawStringAnchored("Chart Title", S/2, P/2, 0.5, 0.5, nil)
 	if err := dc.LoadFontFace("/Library/Fonts/Arial.ttf", 18); err != nil {
 		panic(err)
 	}
-	dc.DrawStringAnchored("X Axis Title", S/2, S-P/2, 0.5, 0.5)
+	dc.DrawStringAnchored("X Axis Title", S/2, S-P/2, 0.5, 0.5, nil)
 	dc.SavePNG("out.png")
 }

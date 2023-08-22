@@ -2,19 +2,13 @@ package gg
 
 import (
 	"crypto/md5"
-	"flag"
 	"fmt"
 	"image/color"
 	"math/rand"
 	"testing"
 )
 
-var save bool
-
-func init() {
-	flag.BoolVar(&save, "save", false, "save PNG output for each test case")
-	flag.Parse()
-}
+var save bool = true
 
 func hash(dc *Context) string {
 	return fmt.Sprintf("%x", md5.Sum(dc.im.Pix))
@@ -199,9 +193,19 @@ func TestDrawStringWrapped(t *testing.T) {
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
-	dc.DrawStringWrapped("Hello, world! How are you?", 50, 50, 0.5, 0.5, 90, 1.5, AlignCenter)
+	dc.DrawStringWrapped("Hello, world! How are you?", 50, 50, 0.5, 0.5, 90, 1.5, AlignCenter, nil)
 	saveImage(dc, "TestDrawStringWrapped")
 	checkHash(t, dc, "8d92f6aae9e8b38563f171abd00893f8")
+}
+
+func TestDrawStringWrappedWithTextSpacing(t *testing.T) {
+	dc := NewContext(100, 100)
+	dc.SetRGB(1, 1, 1)
+	dc.Clear()
+	dc.SetRGB(0, 0, 0)
+	dc.DrawStringWrapped("Hello, world! How are you?", 50, 50, 0.5, 0.5, 90, 1.5, AlignCenter, NewAbsoluteTextSpacing(6))
+	saveImage(dc, "TestDrawStringWrapped")
+	checkHash(t, dc, "614b29f91ad132d0cfa9fb3ee73ae9ab")
 }
 
 func TestDrawImage(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/f64"
+	"golang.org/x/image/math/fixed"
 )
 
 type LineCap int
@@ -52,6 +53,19 @@ var (
 	defaultFillStyle   = NewSolidPattern(color.White)
 	defaultStrokeStyle = NewSolidPattern(color.Black)
 )
+
+type TextSpacing struct {
+	absolute fixed.Int26_6
+	relative float64 // relative font size
+}
+
+func NewAbsoluteTextSpacing(x float64) *TextSpacing {
+	return &TextSpacing{absolute: fix(x)}
+}
+
+func NewRelativeTextSpacing(x float64) *TextSpacing {
+	return &TextSpacing{relative: x}
+}
 
 type Context struct {
 	width         int
@@ -707,7 +721,7 @@ func (dc *Context) FontHeight() float64 {
 	return dc.fontHeight
 }
 
-func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
+func (dc *Context) drawString(im *image.RGBA, s string, x, y float64, ts *TextSpacing) {
 	d := &font.Drawer{
 		Dst:  im,
 		Src:  image.NewUniform(dc.color),
@@ -716,9 +730,17 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 	}
 	// based on Drawer.DrawString() in golang.org/x/image/font/font.go
 	prevC := rune(-1)
+	textSpacing := fixed.I(0)
+	if ts != nil {
+		if ts.relative != 0 {
+			textSpacing = fix(dc.fontHeight * ts.relative)
+		} else {
+			textSpacing = ts.absolute
+		}
+	}
 	for _, c := range s {
 		if prevC >= 0 {
-			d.Dot.X += d.Face.Kern(prevC, c)
+			d.Dot.X += d.Face.Kern(prevC, c) + textSpacing
 		}
 		dr, mask, maskp, advance, ok := d.Face.Glyph(d.Dot, c)
 		if !ok {
@@ -742,22 +764,22 @@ func (dc *Context) drawString(im *image.RGBA, s string, x, y float64) {
 }
 
 // DrawString draws the specified text at the specified point.
-func (dc *Context) DrawString(s string, x, y float64) {
-	dc.DrawStringAnchored(s, x, y, 0, 0)
+func (dc *Context) DrawString(s string, x, y float64, ts *TextSpacing) {
+	dc.DrawStringAnchored(s, x, y, 0, 0, ts)
 }
 
 // DrawStringAnchored draws the specified text at the specified anchor point.
 // The anchor point is x - w * ax, y - h * ay, where w, h is the size of the
 // text. Use ax=0.5, ay=0.5 to center the text at the specified point.
-func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64) {
+func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64, ts *TextSpacing) {
 	w, h := dc.MeasureString(s)
 	x -= ax * w
 	y += ay * h
 	if dc.mask == nil {
-		dc.drawString(dc.im, s, x, y)
+		dc.drawString(dc.im, s, x, y, ts)
 	} else {
 		im := image.NewRGBA(image.Rect(0, 0, dc.width, dc.height))
-		dc.drawString(im, s, x, y)
+		dc.drawString(im, s, x, y, ts)
 		draw.DrawMask(dc.im, dc.im.Bounds(), im, image.ZP, dc.mask, image.ZP, draw.Over)
 	}
 }
@@ -765,7 +787,7 @@ func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64) {
 // DrawStringWrapped word-wraps the specified string to the given max width
 // and then draws it at the specified anchor point using the given line
 // spacing and text alignment.
-func (dc *Context) DrawStringWrapped(s string, x, y, ax, ay, width, lineSpacing float64, align Align) {
+func (dc *Context) DrawStringWrapped(s string, x, y, ax, ay, width, lineSpacing float64, align Align, ts *TextSpacing) {
 	lines := dc.WordWrap(s, width)
 
 	// sync h formula with MeasureMultilineString
@@ -786,7 +808,7 @@ func (dc *Context) DrawStringWrapped(s string, x, y, ax, ay, width, lineSpacing 
 	}
 	ay = 1
 	for _, line := range lines {
-		dc.DrawStringAnchored(line, x, y, ax, ay)
+		dc.DrawStringAnchored(line, x, y, ax, ay, ts)
 		y += dc.fontHeight * lineSpacing
 	}
 }

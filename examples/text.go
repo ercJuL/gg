@@ -11,6 +11,6 @@ func main() {
 	if err := dc.LoadFontFace("/Library/Fonts/Arial.ttf", 96); err != nil {
 		panic(err)
 	}
-	dc.DrawStringAnchored("Hello, world!", S/2, S/2, 0.5, 0.5)
+	dc.DrawStringAnchored("Hello, world!", S/2, S/2, 0.5, 0.5, nil)
 	dc.SavePNG("out.png")
 }

@@ -18,7 +18,7 @@ func main() {
 			i := r*256 + c
 			x := float64(c*T) + T/2
 			y := float64(r*T) + T/2
-			dc.DrawStringAnchored(string(rune(i)), x, y, 0.5, 0.5)
+			dc.DrawStringAnchored(string(rune(i)), x, y, 0.5, 0.5, nil)
 		}
 	}
 	dc.SavePNG("out.png")
