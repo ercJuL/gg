@@ -21,7 +21,7 @@ func main() {
 	})
 	dc.SetFontFace(face)
 	text := "Hello, world!"
-	w, h := dc.MeasureString(text)
+	w, h := dc.MeasureString(text, nil)
 	dc.Rotate(gg.Radians(10))
 	dc.DrawRectangle(100, 180, w, h)
 	dc.Stroke()

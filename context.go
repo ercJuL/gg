@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/golang/freetype/raster"
 	"golang.org/x/image/draw"
@@ -772,7 +773,7 @@ func (dc *Context) DrawString(s string, x, y float64, ts *TextSpacing) {
 // The anchor point is x - w * ax, y - h * ay, where w, h is the size of the
 // text. Use ax=0.5, ay=0.5 to center the text at the specified point.
 func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64, ts *TextSpacing) {
-	w, h := dc.MeasureString(s)
+	w, h := dc.MeasureString(s, ts)
 	x -= ax * w
 	y += ay * h
 	if dc.mask == nil {
@@ -788,7 +789,7 @@ func (dc *Context) DrawStringAnchored(s string, x, y, ax, ay float64, ts *TextSp
 // and then draws it at the specified anchor point using the given line
 // spacing and text alignment.
 func (dc *Context) DrawStringWrapped(s string, x, y, ax, ay, width, lineSpacing float64, align Align, ts *TextSpacing) {
-	lines := dc.WordWrap(s, width)
+	lines := dc.WordWrap(s, width, ts)
 
 	// sync h formula with MeasureMultilineString
 	h := float64(len(lines)) * dc.fontHeight * lineSpacing
@@ -813,7 +814,7 @@ func (dc *Context) DrawStringWrapped(s string, x, y, ax, ay, width, lineSpacing 
 	}
 }
 
-func (dc *Context) MeasureMultilineString(s string, lineSpacing float64) (width, height float64) {
+func (dc *Context) MeasureMultilineString(s string, lineSpacing float64, ts *TextSpacing) (width, height float64) {
 	lines := strings.Split(s, "\n")
 
 	// sync h formula with DrawStringWrapped
@@ -827,6 +828,13 @@ func (dc *Context) MeasureMultilineString(s string, lineSpacing float64) (width,
 	// max width from lines
 	for _, line := range lines {
 		adv := d.MeasureString(line)
+		if ts != nil {
+			if ts.absolute != 0 {
+				adv += ts.absolute.Mul(fix(float64(utf8.RuneCountInString(line) - 1)))
+			} else if ts.relative != 0 {
+				adv += fix(float64(utf8.RuneCountInString(line)-1) * ts.relative * dc.fontHeight)
+			}
+		}
 		currentWidth := float64(adv >> 6) // from gg.Context.MeasureString
 		if currentWidth > width {
 			width = currentWidth
@@ -838,18 +846,25 @@ func (dc *Context) MeasureMultilineString(s string, lineSpacing float64) (width,
 
 // MeasureString returns the rendered width and height of the specified text
 // given the current font face.
-func (dc *Context) MeasureString(s string) (w, h float64) {
+func (dc *Context) MeasureString(s string, ts *TextSpacing) (w, h float64) {
 	d := &font.Drawer{
 		Face: dc.fontFace,
 	}
 	a := d.MeasureString(s)
+	if ts != nil {
+		if ts.absolute != 0 {
+			a += ts.absolute.Mul(fix(float64(utf8.RuneCountInString(s) - 1)))
+		} else if ts.relative != 0 {
+			a += fix(float64(utf8.RuneCountInString(s)-1) * ts.relative * dc.fontHeight)
+		}
+	}
 	return float64(a >> 6), dc.fontHeight
 }
 
 // WordWrap wraps the specified string to the given max width and current
 // font face.
-func (dc *Context) WordWrap(s string, w float64) []string {
-	return wordWrap(dc, s, w)
+func (dc *Context) WordWrap(s string, w float64, ts *TextSpacing) []string {
+	return wordWrap(dc, s, w, ts)
 }
 
 // Transformation Matrix Operations
